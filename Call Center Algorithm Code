@@ -1,0 +1,92 @@
+import pandas as pd
+import numpy as np
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+from scipy import stats
+import scipy.stats as sts
+from scipy.stats import expon, poisson
+from decimal import Decimal
+from scipy.optimize import minimize
+import math
+
+#########################################################################################################################################################################
+
+arrival_data = pd.read_csv('C:/Users/SPNMo/.spyder-py3/arrivaldata(1).csv', delimiter = ',', skiprows = 0, low_memory = False)
+service_data = pd.read_csv('C:/Users/SPNMo/.spyder-py3/servicedata.csv', delimiter = ',', skiprows = 0, low_memory = False)
+
+mean_theta_seconds = np.nanmean(service_data.values)
+mean_theta_minutes = mean_theta_seconds/60
+rate_of_service = 1/mean_theta_minutes
+list_of_column_lambdas = []
+for column in arrival_data:
+    list_of_column_lambdas.append(arrival_data[column].mean())
+vector_of_lambdas = np.array(list_of_column_lambdas)
+main(vector_of_lambdas)
+
+
+def average_service_level(list_of_new_agents, vector_of_lambdas):
+    average = np.average(list_of_new_agents)
+    if average > 0.8:
+        print(list_of_new_agents)
+        print(average)
+        
+
+def recursion(agents, new_lambda):
+    service_level = calculate_service_level(agents, new_lambda)
+    
+    if service_level < 0.8:
+        agents = agents + 1
+        recursion(agents, new_lambda)  
+    return agents  
+   
+        
+def calculate_service_level(agents, new_lambda):
+    N=(((new_lambda/rate_of_service)**agents)/np.math.factorial(agents))
+    P=1-(new_lambda/rate_of_service)/agents
+    K= sum_agents(agents,new_lambda)
+    probability_delay = N / ((P*K)+N)
+    service_level = 1-(probability_delay*(np.exp(-(rate_of_service*(agents-(new_lambda/rate_of_service))*0.5))))
+    return service_level
+   
+    
+def sum_agents(agents, new_lambda):
+    total = 0
+    for summation in range(agents):
+        total = total + (new_lambda/rate_of_service)**summation/np.math.factorial(summation)
+    return total
+
+
+def optimization_of_agents(list_of_new_agents, vector_of_lambdas):
+    for i in range(0,14):
+        if list_of_new_agents[i] !=1:
+            if list_of_new_agents[i] > vector_of_lambdas[i]/rate_of_service:
+                list_of_new_agents[i] = list_of_new_agents[i]-1
+                average_service_level(list_of_new_agents,vector_of_lambdas)
+                optimization_of_agents(list_of_new_agents, vector_of_lambdas)
+            if list_of_new_agents[i] <= vector_of_lambdas[i]/rate_of_service:
+                continue
+    return list_of_new_agents  
+
+def main(vector_of_lambdas):
+    list_of_new_agents = []
+    new_vector_lambdas_list=[]
+    for lambdas in vector_of_lambdas:
+        new_lambda = lambdas/60
+        agents = int(new_lambda/rate_of_service)
+        agents_new = recursion(agents, new_lambda)
+        list_of_new_agents.append(agents_new)
+        new_vector_lambdas_list.append(new_lambda)
+
+    print("Part A: The minimum number of service agents each hour to maintain a service level above 0.8 each hour")
+    print(list_of_new_agents)
+    print("Part A: The average service level")
+    print(mean_service_level)
+
+    print("\n")
+    final_list = optimization_of_agents(list_of_new_agents, new_vector_lambdas_list)
+    print("\n")
+    print("Part B: The final optimized vector of minimum number of service agents per hour:")
+    print(final_list)
+  
+    
+   
